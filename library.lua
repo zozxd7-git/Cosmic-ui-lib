@@ -42,7 +42,6 @@ function UI:Create()
     shadow.ImageTransparency = 0.85
     shadow.Parent = frame
     
-    -- Make shadow behind frame contents
     shadow.ZIndex = 0
     frame.ZIndex = 1
     
@@ -188,11 +187,11 @@ function UI:Create()
 end
 
 function UI:SetTitle(text)
-    self.TitleLabel.Text = text
+    self.TitleLabel.Text = text or self.TitleLabel.Text
 end
 
 function UI:CreateTab(name)
-    assert(name, "Tab name required")
+    assert(type(name) == "string" and #name > 0, "Tab name required")
     
     local tabButton = Instance.new("TextButton")
     tabButton.Text = name
@@ -210,231 +209,40 @@ function UI:CreateTab(name)
     local contentFrame = Instance.new("ScrollingFrame")
     contentFrame.Size = UDim2.new(1, 0, 1, 0)
     contentFrame.BackgroundTransparency = 1
-    contentFrame.ScrollBarThickness = 6
-    contentFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+    contentFrame.ScrollBarThickness = 4
+    contentFrame.CanvasSize = UDim2.new(0,0,0,0)
     contentFrame.Parent = self.TabContent
     contentFrame.Visible = false
     
-    local layout = Instance.new("UIListLayout", contentFrame)
+    local layout = Instance.new("UIListLayout")
+    layout.Padding = UDim.new(0, 10)
     layout.SortOrder = Enum.SortOrder.LayoutOrder
-    layout.Padding = UDim.new(0, 6)
+    layout.Parent = contentFrame
     
-    -- Update canvas size on content change
-    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        contentFrame.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 10)
-    end)
+    local padding = Instance.new("UIPadding")
+    padding.PaddingLeft = UDim.new(0, 10)
+    padding.PaddingRight = UDim.new(0, 10)
+    padding.Parent = contentFrame
     
     local tabObj = {}
     tabObj.Name = name
     tabObj.Button = tabButton
     tabObj.Content = contentFrame
+    tabObj.Button:SetAttribute("IsSelected", false)
     
-    -- Tab controls methods:
+    -- Show/hide functions
     function tabObj:Show()
         contentFrame.Visible = true
-        tabButton.BackgroundColor3 = Color3.fromRGB(70, 70, 75)
+        tabButton.BackgroundColor3 = Color3.fromRGB(100, 100, 120)
+        tabButton:SetAttribute("IsSelected", true)
     end
-    
     function tabObj:Hide()
         contentFrame.Visible = false
         tabButton.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+        tabButton:SetAttribute("IsSelected", false)
     end
     
-    -- Add controls:
-    function tabObj:CreateButton(text)
-        local b = Instance.new("TextButton")
-        b.Size = UDim2.new(1, -20, 0, 30)
-        b.BackgroundColor3 = Color3.fromRGB(65, 65, 70)
-        b.TextColor3 = Color3.new(1,1,1)
-        b.Font = Enum.Font.SourceSansSemibold
-        b.TextSize = 16
-        b.AutoButtonColor = false
-        b.Text = text
-        b.Parent = contentFrame
-        
-        local corner = Instance.new("UICorner", b)
-        corner.CornerRadius = UDim.new(0, 6)
-        
-        local callback = function() end
-        b.MouseEnter:Connect(function()
-            TweenService:Create(b, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(80,80,85)}):Play()
-        end)
-        b.MouseLeave:Connect(function()
-            TweenService:Create(b, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(65,65,70)}):Play()
-        end)
-        b.MouseButton1Click:Connect(function()
-            callback()
-        end)
-        
-        local obj = {}
-        function obj:SetCallback(func)
-            callback = func or function() end
-        end
-        
-        return obj
-    end
-    
-    function tabObj:CreateToggle(name, default)
-        local frame = Instance.new("Frame")
-        frame.Size = UDim2.new(1, -20, 0, 30)
-        frame.BackgroundTransparency = 1
-        frame.Parent = contentFrame
-        
-        local label = Instance.new("TextLabel")
-        label.Size = UDim2.new(0.75, 0, 1, 0)
-        label.Position = UDim2.new(0, 5, 0, 0)
-        label.BackgroundTransparency = 1
-        label.Text = name
-        label.TextColor3 = Color3.new(1,1,1)
-        label.Font = Enum.Font.SourceSansSemibold
-        label.TextSize = 16
-        label.TextXAlignment = Enum.TextXAlignment.Left
-        label.Parent = frame
-        
-        local toggleBtn = Instance.new("TextButton")
-        toggleBtn.Size = UDim2.new(0, 30, 0, 24)
-        toggleBtn.Position = UDim2.new(1, -35, 0, 3)
-        toggleBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
-        toggleBtn.TextColor3 = Color3.new(1,1,1)
-        toggleBtn.Font = Enum.Font.SourceSansBold
-        toggleBtn.TextSize = 20
-        toggleBtn.Text = default and "✔" or "✘"
-        toggleBtn.AutoButtonColor = false
-        toggleBtn.Parent = frame
-        
-        local corner = Instance.new("UICorner", toggleBtn)
-        corner.CornerRadius = UDim.new(0, 6)
-        
-        local val = default
-        local callback = function() end
-        
-        toggleBtn.MouseButton1Click:Connect(function()
-            val = not val
-            toggleBtn.Text = val and "✔" or "✘"
-            callback(val)
-        end)
-        
-        local obj = {}
-        function obj:SetCallback(func)
-            callback = func or function() end
-        end
-        function obj:GetValue()
-            return val
-        end
-        
-        return obj
-    end
-    
-    function tabObj:CreateSlider(name, min, max, default)
-        local frame = Instance.new("Frame")
-        frame.Size = UDim2.new(1, -20, 0, 50)
-        frame.BackgroundTransparency = 1
-        frame.Parent = contentFrame
-        
-        local label = Instance.new("TextLabel")
-        label.Size = UDim2.new(1, 0, 0, 20)
-        label.BackgroundTransparency = 1
-        label.Text = name
-        label.TextColor3 = Color3.new(1,1,1)
-        label.Font = Enum.Font.SourceSansSemibold
-        label.TextSize = 16
-        label.TextXAlignment = Enum.TextXAlignment.Left
-        label.Parent = frame
-        
-        local sliderFrame = Instance.new("Frame")
-        sliderFrame.Size = UDim2.new(1, -10, 0, 20)
-        sliderFrame.Position = UDim2.new(0, 5, 0, 25)
-        sliderFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
-        sliderFrame.Parent = frame
-        
-        local sliderCorner = Instance.new("UICorner")
-        sliderCorner.CornerRadius = UDim.new(0, 6)
-        sliderCorner.Parent = sliderFrame
-        
-        local fill = Instance.new("Frame")
-        fill.Size = UDim2.new((default - min)/(max - min), 0, 1, 0)
-        fill.BackgroundColor3 = Color3.fromRGB(100, 100, 255)
-        fill.Parent = sliderFrame
-        
-        local fillCorner = Instance.new("UICorner")
-        fillCorner.CornerRadius = UDim.new(0, 6)
-        fillCorner.Parent = fill
-        
-        local valueLabel = Instance.new("TextLabel")
-        valueLabel.Size = UDim2.new(0, 40, 1, 0)
-        valueLabel.Position = UDim2.new(1, 5, 0, 0)
-        valueLabel.BackgroundTransparency = 1
-        valueLabel.Text = tostring(default)
-        valueLabel.TextColor3 = Color3.new(1,1,1)
-        valueLabel.Font = Enum.Font.SourceSansSemibold
-        valueLabel.TextSize = 16
-        valueLabel.Parent = frame
-        
-        local dragging = false
-        local callback = function() end
-        local val = default
-        
-        sliderFrame.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                dragging = true
-                local function move(inputMove)
-                    local pos = inputMove.Position.X - sliderFrame.AbsolutePosition.X
-                    pos = math.clamp(pos, 0, sliderFrame.AbsoluteSize.X)
-                    local percent = pos / sliderFrame.AbsoluteSize.X
-                    val = math.floor(min + (max - min)*percent + 0.5)
-                    fill.Size = UDim2.new(percent, 0, 1, 0)
-                    valueLabel.Text = tostring(val)
-                    callback(val)
-                end
-                
-                move(input)
-                
-                local conn
-                conn = UserInputService.InputChanged:Connect(function(inputMove)
-                    if dragging and inputMove.UserInputType == Enum.UserInputType.MouseMovement then
-                        move(inputMove)
-                    end
-                end)
-                
-                UserInputService.InputEnded:Connect(function(inputEnd)
-                    if inputEnd.UserInputType == Enum.UserInputType.MouseButton1 then
-                        dragging = false
-                        conn:Disconnect()
-                    end
-                end)
-            end
-        end)
-        
-        local obj = {}
-        function obj:SetCallback(func)
-            callback = func or function() end
-        end
-        function obj:GetValue()
-            return val
-        end
-        
-        return obj
-    end
-    
-    function tabObj:CreateLabel(text)
-        local label = Instance.new("TextLabel")
-        label.Size = UDim2.new(1, -20, 0, 20)
-        label.BackgroundTransparency = 1
-        label.TextColor3 = Color3.new(1,1,1)
-        label.Font = Enum.Font.SourceSansSemibold
-        label.TextSize = 16
-        label.Text = text
-        label.TextXAlignment = Enum.TextXAlignment.Left
-        label.Parent = contentFrame
-        
-        local obj = {}
-        function obj:SetText(newText)
-            label.Text = newText
-        end
-        return obj
-    end
-    
-    -- Tab switching logic:
+    -- Button click switches tab
     tabButton.MouseButton1Click:Connect(function()
         for _, tab in pairs(self.Tabs) do
             tab:Hide()
@@ -443,8 +251,166 @@ function UI:CreateTab(name)
         self.CurrentTab = tabObj
     end)
     
-    -- Add to UI tabs list and auto-select first tab
+    -- Add UI elements creators to the tab object:
+    
+    function tabObj:AddButton(text)
+        assert(type(text) == "string", "Button text required")
+        local button = Instance.new("TextButton")
+        button.Size = UDim2.new(1, 0, 0, 30)
+        button.BackgroundColor3 = Color3.fromRGB(70, 70, 85)
+        button.TextColor3 = Color3.new(1, 1, 1)
+        button.Font = Enum.Font.SourceSansSemibold
+        button.TextSize = 16
+        button.Text = text
+        button.AutoButtonColor = false
+        button.Parent = contentFrame
+        
+        local corner = Instance.new("UICorner", button)
+        corner.CornerRadius = UDim.new(0, 6)
+        
+        local obj = {}
+        function obj:SetCallback(callback)
+            assert(type(callback) == "function", "Callback must be function")
+            button.MouseButton1Click:Connect(callback)
+        end
+        return obj
+    end
+    
+    function tabObj:AddToggle(text, default)
+        assert(type(text) == "string", "Toggle text required")
+        local toggled = default and true or false
+        
+        local frame = Instance.new("Frame")
+        frame.Size = UDim2.new(1, 0, 0, 30)
+        frame.BackgroundTransparency = 1
+        frame.Parent = contentFrame
+        
+        local label = Instance.new("TextLabel")
+        label.Text = text
+        label.Size = UDim2.new(0.7, 0, 1, 0)
+        label.BackgroundTransparency = 1
+        label.TextColor3 = Color3.new(1, 1, 1)
+        label.Font = Enum.Font.SourceSansSemibold
+        label.TextSize = 16
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.Parent = frame
+        
+        local toggleBtn = Instance.new("TextButton")
+        toggleBtn.Size = UDim2.new(0, 40, 0, 25)
+        toggleBtn.Position = UDim2.new(1, -45, 0, 2)
+        toggleBtn.BackgroundColor3 = toggled and Color3.fromRGB(0, 150, 136) or Color3.fromRGB(80, 80, 80)
+        toggleBtn.Text = toggled and "ON" or "OFF"
+        toggleBtn.TextColor3 = Color3.new(1,1,1)
+        toggleBtn.Font = Enum.Font.SourceSansSemibold
+        toggleBtn.TextSize = 14
+        toggleBtn.AutoButtonColor = false
+        toggleBtn.Parent = frame
+        
+        local corner = Instance.new("UICorner", toggleBtn)
+        corner.CornerRadius = UDim.new(0, 6)
+        
+        local obj = {}
+        
+        function obj:SetCallback(callback)
+            assert(type(callback) == "function", "Callback must be function")
+            toggleBtn.MouseButton1Click:Connect(function()
+                toggled = not toggled
+                toggleBtn.BackgroundColor3 = toggled and Color3.fromRGB(0, 150, 136) or Color3.fromRGB(80, 80, 80)
+                toggleBtn.Text = toggled and "ON" or "OFF"
+                callback(toggled)
+            end)
+        end
+        
+        function obj:GetValue()
+            return toggled
+        end
+        
+        return obj
+    end
+    
+    function tabObj:AddSlider(text, min, max, default)
+        assert(type(text) == "string", "Slider text required")
+        assert(type(min) == "number" and type(max) == "number" and min < max, "Invalid min/max")
+        
+        local frame = Instance.new("Frame")
+        frame.Size = UDim2.new(1, 0, 0, 40)
+        frame.BackgroundTransparency = 1
+        frame.Parent = contentFrame
+        
+        local label = Instance.new("TextLabel")
+        label.Text = text
+        label.Size = UDim2.new(1, 0, 0, 20)
+        label.BackgroundTransparency = 1
+        label.TextColor3 = Color3.new(1, 1, 1)
+        label.Font = Enum.Font.SourceSansSemibold
+        label.TextSize = 16
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.Parent = frame
+        
+        local sliderFrame = Instance.new("Frame")
+        sliderFrame.Size = UDim2.new(1, 0, 0, 10)
+        sliderFrame.Position = UDim2.new(0, 0, 0, 25)
+        sliderFrame.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+        sliderFrame.Parent = frame
+        
+        local sliderFill = Instance.new("Frame")
+        sliderFill.Size = UDim2.new(((default or min) - min) / (max - min), 0, 1, 0)
+        sliderFill.BackgroundColor3 = Color3.fromRGB(0, 150, 136)
+        sliderFill.Parent = sliderFrame
+        
+        local sliderCorner = Instance.new("UICorner")
+        sliderCorner.CornerRadius = UDim.new(0, 6)
+        sliderCorner.Parent = sliderFrame
+        
+        local fillCorner = Instance.new("UICorner")
+        fillCorner.CornerRadius = UDim.new(0, 6)
+        fillCorner.Parent = sliderFill
+        
+        local dragging = false
+        local val = default or min
+        
+        sliderFrame.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                dragging = true
+                local pos = input.Position.X - sliderFrame.AbsolutePosition.X
+                local size = sliderFrame.AbsoluteSize.X
+                val = math.clamp(min + (pos / size) * (max - min), min, max)
+                sliderFill.Size = UDim2.new((val - min) / (max - min), 0, 1, 0)
+                if sliderObj.Callback then sliderObj.Callback(val) end
+            end
+        end)
+        
+        sliderFrame.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                dragging = false
+            end
+        end)
+        
+        sliderFrame.InputChanged:Connect(function(input)
+            if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+                local pos = input.Position.X - sliderFrame.AbsolutePosition.X
+                local size = sliderFrame.AbsoluteSize.X
+                val = math.clamp(min + (pos / size) * (max - min), min, max)
+                sliderFill.Size = UDim2.new((val - min) / (max - min), 0, 1, 0)
+                if sliderObj.Callback then sliderObj.Callback(val) end
+            end
+        end)
+        
+        local sliderObj = {}
+        function sliderObj:SetCallback(callback)
+            sliderObj.Callback = callback
+        end
+        function sliderObj:GetValue()
+            return val
+        end
+        
+        return sliderObj
+    end
+    
+    -- Add the tab to the UI tabs list
     table.insert(self.Tabs, tabObj)
+    
+    -- If first tab, select it automatically
     if #self.Tabs == 1 then
         tabObj:Show()
         self.CurrentTab = tabObj
@@ -453,10 +419,27 @@ function UI:CreateTab(name)
     return tabObj
 end
 
--- Create and return the UI instance
 function UI.new()
-    local instance = UI:Create()
-    return instance
+    return UI:Create()
 end
 
-return UI
+-- ===== Usage example =====
+local cosmic = UI.new()
+cosmic:SetTitle("My Cosmic UI")
+
+local homeTab = cosmic:CreateTab("Home")
+
+local buttonObj = homeTab:AddButton("Click me!")
+buttonObj:SetCallback(function()
+    print("Button clicked!")
+end)
+
+local toggleObj = homeTab:AddToggle("Enable feature", false)
+toggleObj:SetCallback(function(state)
+    print("Toggle state:", state)
+end)
+
+local sliderObj = homeTab:AddSlider("Volume", 0, 100, 50)
+sliderObj:SetCallback(function(val)
+    print("Slider value:", val)
+end)
